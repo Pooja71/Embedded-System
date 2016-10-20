@@ -55,7 +55,7 @@ int main(int argc, char**argv)
 
 void alphaBlend_c(int *fgImage, int *bgImage, int *dstImage)
 {
-  int x, y;/*
+  int x;/*
   for(y = 0; y < 512; y++){
      for(x = 0; x < 512; x++){
         int a_fg = A(fgImage[(y*512)+x]);
@@ -70,35 +70,37 @@ void alphaBlend_c(int *fgImage, int *bgImage, int *dstImage)
   }
   */
   
-  	  uint8x8x4_t fg_rgb = vld4_u8(&fgImage[x]);		//loading foreground image 8 pixels at a time
-	  uint8x8x4_t bg_rgb = vld4_u8(&bgImage[x]);		//loading background image 8 pixels at a time
-	  unint8x8_t const_255 = vdup_n_u8 (255);		//loading a double reister to hold 8 elements of value 255 for taking the complement of the alpha
+  	  uint8x8x4_t fg_rgb;		//loading foreground image 8 pixels at a time
+	  uint8x8x4_t bg_rgb;		//loading background image 8 pixels at a time
+	  uint8x8_t const_25 = vdup_n_u8 ((uint8_t)255);		//loading a double reister to hold 8 elements of value 255 for taking the complement of the alpha
 	  uint16x8_t temp;
 	  uint8x8_t temp_subpixel;
 	  uint8x8x4_t result;					//interleaved destination register
-	  result.val[0]=const_255;			//first byte of dest image is 255
+	  result.val[3]=const_255;			//first byte of dest image is 255
   for(x=0; x< (512*512/8); x+=8)
-  {	  	  
-	  const_255 = vsub_u8(const_255,fg_rgb[0]);
+  {	
+      fg_rgb = vld4_u8((const uint8_t *)&fgImage[x]);
+      bg_rgb = vld4_u8((const uint8_t *)&bgImage[x]);
+	  const_255 = vsub_u8(const_255,fg_rgb.val[3]);
 	  
 	  //Calculation for red
-	temp = vmull_u8 (fg_rgb.val[1], fg_rgb.val[0]);	  //multiply the foreground subpixel by alpha
+	temp = vmull_u8 (fg_rgb.val[0], fg_rgb.val[3]);	  //multiply the foreground subpixel by alpha
+    temp = vmlal_u8 (temp,bg_rgb.val[0], const_255);	//multiply the background subpixel by (255-alpha)
+	temp_subpixel = vshrn_n_u16 (temp, 8);						//divide by 256
+	result.val[0]=temp_subpixel;
+	
+	//Calculation for green
+	temp = vmull_u8 (fg_rgb.val[1], fg_rgb.val[3]);	  //multiply the foreground subpixel by alpha
     temp = vmlal_u8 (temp,bg_rgb.val[1], const_255);	//multiply the background subpixel by (255-alpha)
 	temp_subpixel = vshrn_n_u16 (temp, 8);						//divide by 256
 	result.val[1]=temp_subpixel;
 	
-	//Calculation for green
-	temp = vmull_u8 (fg_rgb.val[2], fg_rgb.val[0]);	  //multiply the foreground subpixel by alpha
+	//Calculation for blue
+	temp = vmull_u8 (fg_rgb.val[2], fg_rgb.val[3]);	  //multiply the foreground subpixel by alpha
     temp = vmlal_u8 (temp,bg_rgb.val[2], const_255);	//multiply the background subpixel by (255-alpha)
 	temp_subpixel = vshrn_n_u16 (temp, 8);						//divide by 256
 	result.val[2]=temp_subpixel;
 	
-	//Calculation for blue
-	temp = vmull_u8 (fg_rgb.val[3], fg_rgb.val[0]);	  //multiply the foreground subpixel by alpha
-    temp = vmlal_u8 (temp,bg_rgb.val[3], const_255);	//multiply the background subpixel by (255-alpha)
-	temp_subpixel = vshrn_n_u16 (temp, 8);						//divide by 256
-	result.val[3]=temp_subpixel;
-	
-	vst4_u8 (&dest[x], result);				//send the data back to the destination array    	  
+	vst4_u8 ((uint8_t *)&dstImage[x], result);				//send the data back to the destination array    	  
   }
 }
