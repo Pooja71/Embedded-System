@@ -1,17 +1,11 @@
 CC = gcc
-CFLAGS = -Wall -O3 -march=armv7-a -mfpu=neon -mcpu=cortex-a8 -mtune=cortex-a8  -ftree-vectorize -ftree-vectorizer-verbose=7 -fverbose-asm -O3 -funsafe-loop-optimizations #-ftree-loop-distribute-patterns -fwhole-program -fforward-propagate 
+CFLAGS = -Wall -march=armv7-a -mfpu=neon -mfloat-abi=hard -mcpu=cortex-a8 -mtune=cortex-a8 -O3 -ggdb -ffast-math -fsingle-precision-constant -fno-tree-loop-vectorize -fno-tree-vectorize -fno-unroll-loops
 
+test: alpha_time.o
+	$(CC) alpha_time.o -pg -g -static -lrt -lm -o $@
 
-all:alpha.out alpha.s
-
-alpha.out: alpha.o
-	$(CC) $(CFLAGS) -o $@ $< 
-
-alpha.o: alpha_time.c
-	$(CC) $(CFLAGS) -c $< -o $@
-
-alpha.s: alpha_time.c
-	$(CC) -Wa,-adhln -g alpha_time.c > alpha_time.s
+main_list.s: alpha_time.c
+	$(CC) $(CFLAGS) -Wa,-adhln -g alpha_time.c -c > main_list.s
 
 clean:
-	rm -f *.out *.o
+	rm -f test *.o  *.s
