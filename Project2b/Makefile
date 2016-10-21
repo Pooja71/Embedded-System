@@ -1,7 +1,7 @@
 CC = gcc
 CFLAGS = -Wall -march=armv7-a -mfpu=neon -mfloat-abi=hard -mcpu=cortex-a8 -mtune=cortex-a8 -O3 -ggdb -ffast-math -fsingle-precision-constant -fno-tree-loop-vectorize -fno-tree-vectorize -fno-unroll-loops
 
-test: alpha_time.o
+test: alpha_time.o main_list.s
 	$(CC) alpha_time.o -pg -g -static -lrt -lm -o $@
 
 main_list.s: alpha_time.c
